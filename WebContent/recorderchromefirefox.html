@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Home Page - Voice Recording Application</title>
+        <link href="favicon.ico" rel="shortcut icon" type="image/x-icon" />
+        <meta name="viewport" content="width=device-width" />
+        <link href="http://92.67.39.201:8081/VoiceRecorder04/site.css" rel="stylesheet"/>
+        <link href="http://92.67.39.201:8081/VoiceRecorder04/voicerecorder.css" rel="stylesheet"/>
+
+        <script type="text/javascript" src="http://92.67.39.201:8081/VoiceRecorder04/modernizr-2.6.2.js"></script>
+
+    </head>
+    <body>
+        <header>
+            <div class="content-wrapper">
+                
+            </div>
+        </header>
+                            
+<script type="text/javascript" src="http://92.67.39.201:8081/VoiceRecorder04/jquery-1.7.1.js"></script>
+<script type="text/javascript" src="http://92.67.39.201:8081/VoiceRecorder04/recorder.js"></script>
+<script>
+    var BASE_URL = 'hello';
+    $(document).ready(function () {
+        
+        if (!navigator.getUserMedia)
+            navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+        $("#startbtn").click(function () {
+            startRecorder(recorder);
+            recording = true;
+        });
+
+        $("#stop").click(function () {
+            stopRecorder(recorder);
+            recording = false;
+            $("#start").html("Recorded succesfully. Now uploading on server....");
+            uploadRecordedAudio();
+            
+        });
+		$("#pause").click(function () {
+            stopRecorder(recorder);
+            recording = false;
+            $("#resume").css("display", "");
+            $("#pause").css("display", "none");
+        });
+
+       $("#resume").click(function () {
+                   recorder.record();
+                   recording = true;
+                   $("#resume").css("display", "none");
+            $("#pause").css("display", "");
+                   
+        });
+            var startRecorder = function (recorder) {
+                recorder.clear();
+                $("#start").html("recording running......");
+                recorder.record();
+            }
+            var stopRecorder = function (recorder) {
+                recorder.stop();
+                
+                
+            }
+           
+            if (navigator.getUserMedia) {
+                navigator.getUserMedia({ "audio": true }, function (stream) {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioContext = new AudioContext();
+                    inputPoint = audioContext.createGain();
+                    realAudioInput = audioContext.createMediaStreamSource(stream);
+                    audioInput = realAudioInput;
+                    audioInput.connect(inputPoint)
+                    var recording = false;
+                   
+                    recorder = new Recorder(inputPoint, {
+                        workerPath: "recorderWorker.js"
+                    });
+                    
+                   
+                   
+                },
+
+              function (error) {
+                  $("body").text("Error: you need to allow this sample to use the microphone.")
+              });
+            } else {
+                alert("getUserMedia not supported");
+            }
+
+
+      
+    });
+    function uploadRecordedAudio() {
+        recorder.exportWAV(function (blob) {
+            var url = (window.URL || window.webkitURL).createObjectURL(blob);	// Set the recorded url to the player so that recorded sound can be heard by Gourav on 03/20/2014
+            $("audio").attr("src", url);
+            $("#overlay").css("height", $( window ).height());
+            $("#overlay").addClass("OverlayEffect");
+            $("#modalMsg").removeClass("HideModal");
+            $("#modalMsg").addClass("ShowModal");
+            $('#modalMsg').css('position','fixed');
+            $('#modalMsg').css("left", ($(window).width()/2-$('#modalMsg').width()/2) + "px");
+            $('#modalMsg').css("top", ($(window).height()/2-$('#modalMsg').height()/2) + "px");
+                var xhr = new XMLHttpRequest();
+                filename = "output.wav";
+                xhr.open('POST', "hello?file=" + filename, true);
+                xhr.onload = function (e) {
+                    e.stopImmediatePropagation();
+                    var result = e.target.result;
+                };
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        $("#start").html("Uploaded succesfully on server....");
+                        $("#overlay").removeClass("OverlayEffect");
+                        $("#overlay").css("height", "0px");
+                        $("#modalMsg").removeClass("ShowModal");
+                        $("#modalMsg").addClass("HideModal");
+                        fileAndFolderName = xhr.responseText;
+                        var splitFileAndFolderName = fileAndFolderName.split("|");
+                        UserFolder = splitFileAndFolderName[1];
+                       
+                        var generateUrl = "hello";
+                        
+                        $("#filename").val(generateUrl);
+                        $("#play").css("display", "");
+                        $("#player_audio").css("display", "");
+                        $("#player_src").attr("src", generateUrl);
+                        $("#player_audio").get()[0].load();
+                        
+                    }
+                }
+                xhr.send(blob);
+        });
+    }
+    </script>
+
+Record Upload Sample
+
+    
+    <div id="overlay"></div>
+    <div id="modalMsg" style="width: 200px; height: 100px; border-color: Black; border-style: solid;
+        color: Red;" class="HideModal">
+        <img src="loading.gif">
+           Uploading file on server...
+    </div>
+    <form>
+    	<input id="startbtn" type="button" value="Start">  &nbsp; &nbsp; <input id="pause" type="button" value="Pause"> &nbsp; &nbsp; <input id="resume" type="button" value="Resume" style="display:none;">&nbsp; &nbsp; <input id="stop" type="button" value="Stop"> &nbsp; &nbsp;
+   		<audio id="player_audio" controls style="display: none">
+            <source id="player_src" src="" type="audio/mp3" />
+        </audio>
+        <input type="hidden" value="" id="filename">
+        <br /><br />
+        <div id="start"></div>
+    	<div id="status"></div>
+    </form>
+        <footer>
+            <div class="content-wrapper">
+               
+            </div>
+        </footer>
+
+       
+    </body>
+</html>
